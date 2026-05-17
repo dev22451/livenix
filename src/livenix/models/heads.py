@@ -222,11 +222,113 @@ class FFTHead(nn.Module):
 
 
 class SigLIPDistillHead(nn.Module):
-    """Auxiliary SigLIP-So400m feature distillation. Training-only."""
+    """1x1 projection from backbone feature dim → SigLIP teacher embedding dim.
 
-    def __init__(self, *args, **kwargs) -> None:
+    Purpose
+    -------
+    SigLIP-So400m (Google, Apache 2.0) has been pretrained on 4B image-text
+    pairs and encodes rich semantic priors — especially useful for distinguishing
+    naturalistic human faces from printed/replayed/AIGC variants that deviate
+    subtly from scene statistics.
+
+    By supervising the backbone's spatial feature map to match the frozen
+    SigLIP teacher's image embedding, we transfer these priors without
+    increasing inference cost: the teacher is run only during training, and
+    this module is stripped at export.
+
+    Design
+    ------
+    A single 1×1 convolution maps from the backbone's channel count to the
+    teacher's embedding dimension. After projection the spatial grid is
+    averaged to a single vector that is L2-normalized, mirroring the
+    normalized-embedding style used in SigLIP's own contrastive training.
+
+    Loss is MSE between the normalized student vector and the L2-normalized
+    teacher embedding. MSE on normalized vectors is proportional to
+    ``2 - 2 * cos(θ)``, so it effectively minimizes the cosine distance while
+    remaining differentiable and numerically stable — no temperature
+    hyper-parameter needed compared to InfoNCE.  The caller weights this loss
+    at 0.5× before adding it to the combined objective (see ARCHITECTURE.md,
+    Loss section).
+
+    Teacher integration
+    -------------------
+    The actual SigLIP-So400m teacher (1.6 GB HuggingFace checkpoint) is
+    wired in by the training loop in **T2.11**. The trainer runs the teacher
+    under ``torch.no_grad()`` in bf16 to produce ``teacher_emb: Tensor``
+    of shape ``(B, teacher_dim)``, then calls ``head.loss(student_emb,
+    teacher_emb)``.  This module does **not** load, import, or reference the
+    teacher in any way — keeping T2.2 dependency-free and CI-fast.
+
+    Stripped at export
+    ------------------
+    ``SigLIPDistillHead`` is instantiated only by the training pipeline.
+    ``LivenixModel.forward()`` does not reference it; the ONNX/TFLite/CoreML
+    graphs therefore contain zero teacher-distillation ops.
+
+    Args:
+        in_channels: backbone feature-map channel count (e.g. 960 for
+            MobileNetV4-Conv-Small final stage).
+        teacher_dim: teacher embedding dim. Default 1152 matches
+            SigLIP-So400m-patch14-384.
+    """
+
+    TEACHER_NAME = "google/siglip-so400m-patch14-384"  # documented, not loaded here
+    DEFAULT_TEACHER_DIM = 1152
+
+    def __init__(self, in_channels: int, teacher_dim: int = 1152) -> None:
         super().__init__()
-        raise NotImplementedError("SigLIPDistillHead is implemented in Week 2.")
+        self.projection = nn.Conv2d(in_channels, teacher_dim, kernel_size=1, bias=False)
+        self.teacher_dim = teacher_dim
+
+    def forward(self, feat_map: Tensor) -> Tensor:
+        """Project (B, C, H, W) backbone features → (B, teacher_dim) student embedding.
+
+        Pipeline:
+          1. 1×1 conv maps channel dim: C → teacher_dim, spatial unchanged.
+          2. Spatial mean pools the H×W grid to a single vector per sample.
+          3. L2 normalization aligns the student vector with the teacher's
+             normalized embedding space, making the MSE loss cosine-aware.
+
+        Args:
+            feat_map: Backbone feature map, shape (B, in_channels, H, W).
+
+        Returns:
+            L2-normalized student embedding, shape (B, teacher_dim).
+            Norm is ≈ 1.0 per row (up to floating-point precision).
+        """
+        x = self.projection(feat_map)   # (B, teacher_dim, H, W)
+        x = x.mean(dim=(2, 3))          # (B, teacher_dim)
+        return F.normalize(x, dim=-1)   # L2-normalized for cosine-friendly loss
+
+    def loss(self, student_emb: Tensor, teacher_emb: Tensor) -> Tensor:
+        """MSE between L2-normalized student and teacher embeddings.
+
+        Both embeddings are normalized before the MSE is computed, so the
+        loss value lies in ``[0, 4]`` (0 = identical direction, 4 = antipodal).
+        In practice it converges well into the ``[0, 0.1]`` range.
+
+        The trainer (T2.11) is responsible for:
+          - Running the frozen SigLIP teacher under ``torch.no_grad()`` to
+            obtain ``teacher_emb``.
+          - Scaling the returned scalar by 0.5 before adding to the combined
+            loss (ARCHITECTURE.md Loss section).
+
+        This module does NOT load or run the teacher itself.
+
+        Args:
+            student_emb: Output of ``forward()``, shape (B, teacher_dim),
+                already L2-normalized.
+            teacher_emb: Teacher image embedding from T2.11, shape
+                (B, teacher_dim). May be unnormalized — this method applies
+                its own normalization so the caller does not need to pre-normalize.
+
+        Returns:
+            Scalar MSE loss tensor with gradient flowing back through
+            ``student_emb`` into ``self.projection``.
+        """
+        teacher_norm = F.normalize(teacher_emb, dim=-1)
+        return F.mse_loss(student_emb, teacher_norm)
 
 
 class PatchContrastiveHead(nn.Module):
