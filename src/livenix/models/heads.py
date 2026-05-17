@@ -332,8 +332,204 @@ class SigLIPDistillHead(nn.Module):
 
 
 class PatchContrastiveHead(nn.Module):
-    """Auxiliary patch-wise contrastive (NT-Xent) head. Training-only."""
+    """Supervised patch-wise contrastive head (NT-Xent, class-conditional).
 
-    def __init__(self, *args, **kwargs) -> None:
+    Purpose
+    -------
+    Global classification alone is insufficient to learn discriminative
+    local textures for face anti-spoofing — a print spoof may have the
+    same macro structure as a real face while differing only at the patch
+    level (paper grain, moiré, screen sub-pixel pattern).  This head
+    forces patch-level discrimination by treating every spatial location
+    of the backbone feature map as an independent "patch token" and
+    applying a supervised contrastive objective: patches from the same
+    attack class attract while patches from different classes repel.
+
+    Loss formulation (Supervised NT-Xent)
+    --------------------------------------
+    Based on Khosla et al. (2020) "Supervised Contrastive Learning"
+    (NeurIPS 2020), adapted to spatial feature maps following the
+    patch-token approach of Wang et al. (2022) "PatchNet: Rethinking
+    Pseudo Natural Images for Face Presentation Attack Detection"
+    (CVPR 2022).
+
+    For each patch anchor z_i, the set of positive pairs P(i) is defined
+    as all other patches j whose source image shares the same class label:
+
+        L = -(1/|P(i)|) Σ_{j ∈ P(i)} log(
+                exp(sim(z_i, z_j) / τ) / Σ_{k ≠ i} exp(sim(z_i, z_k) / τ)
+            )
+
+    where z_i are L2-normalized projected embeddings and τ is the
+    temperature hyper-parameter (default 0.07, as recommended in SimCLR
+    and SupCon).
+
+    Design
+    ------
+    A lightweight 1×1 Conv + BatchNorm projector maps the backbone feature
+    map from (B, C, H, W) → (B, proj_dim, H, W).  All H×W spatial
+    locations are then flattened and L2-normalized to form patch embeddings
+    of shape (B*H*W, proj_dim).  The NT-Xent loss is computed fully
+    vectorized (no Python loops over N).
+
+    Training coupling
+    -----------------
+    The training loop:
+      1. Feeds the backbone feature map into ``forward(feat_map)`` to
+         get L2-normalized patch embeddings of shape (B*H*W, proj_dim).
+      2. Calls ``head.loss(patch_emb, labels, num_patches_per_sample=H*W)``
+         where labels is the (B,) integer class vector for the batch.
+      3. Scales the returned scalar by 0.3 before adding to the combined
+         loss (see ARCHITECTURE.md, Loss section: 0.3× NT-Xent).
+
+    Stripped at export
+    ------------------
+    This module is instantiated only by the training pipeline.
+    ``LivenixModel.forward()`` does not reference it; the exported
+    ONNX/TFLite/CoreML graphs contain zero contrastive-loss ops.
+
+    References
+    ----------
+    - Khosla, P. et al. (2020). "Supervised Contrastive Learning."
+      NeurIPS 2020. https://arxiv.org/abs/2004.11362
+    - Wang, Z. et al. (2022). "PatchNet: Rethinking Pseudo Natural Images
+      for Face Presentation Attack Detection." CVPR 2022.
+      https://openaccess.thecvf.com/content/CVPR2022/papers/Wang_PatchNet.pdf
+
+    Args:
+        in_channels: backbone feature-map channel count (e.g. 960 for
+            MobileNetV4-Conv-Small final stage).
+        proj_dim: projection head output dimensionality. Default 128
+            matches the SupCon paper's recommended setting.
+        temperature: NT-Xent temperature τ. Default 0.07 follows SimCLR
+            and SupCon recommendations for tightly-clustered embeddings.
+    """
+
+    def __init__(
+        self,
+        in_channels: int,
+        proj_dim: int = 128,
+        temperature: float = 0.07,
+    ) -> None:
         super().__init__()
-        raise NotImplementedError("PatchContrastiveHead is implemented in Week 2.")
+        # 1×1 Conv projects channel dim, BN normalizes the distribution.
+        # No bias in Conv because BN has its own affine parameters.
+        self.projector = nn.Sequential(
+            nn.Conv2d(in_channels, proj_dim, kernel_size=1, bias=False),
+            nn.BatchNorm2d(proj_dim),
+        )
+        self.temperature = temperature
+
+    def forward(self, feat_map: Tensor) -> Tensor:
+        """Project (B, C, H, W) → (B*H*W, proj_dim) L2-normalized patch embeddings.
+
+        Each spatial location (h, w) of the projected feature map becomes
+        an independent patch token.  All tokens are L2-normalized so that
+        the dot product between two tokens equals their cosine similarity,
+        which is the required input format for NT-Xent.
+
+        Caller must retain ``H*W`` (= ``num_patches_per_sample``) for the
+        subsequent call to :meth:`loss`.
+
+        Args:
+            feat_map: Backbone feature map, shape (B, in_channels, H, W).
+
+        Returns:
+            L2-normalized patch embeddings, shape (B*H*W, proj_dim).
+            Per-row L2 norm ≈ 1.0 (up to floating-point precision).
+        """
+        x = self.projector(feat_map)              # (B, proj_dim, H, W)
+        B, D, H, W = x.shape
+        # (B, D, H, W) → (B, H, W, D) → (B*H*W, D)
+        x = x.permute(0, 2, 3, 1).reshape(B * H * W, D)
+        return F.normalize(x, dim=-1)
+
+    def loss(
+        self,
+        patch_emb: Tensor,
+        labels: Tensor,
+        num_patches_per_sample: int,
+    ) -> Tensor:
+        """Supervised NT-Xent loss over patch embeddings.
+
+        Expands per-image class labels to per-patch labels, then computes
+        the fully-vectorized supervised NT-Xent objective.  Diagonal
+        (self-similarity) entries are masked out from both numerator and
+        denominator, following the standard SupCon formulation.
+
+        Numerical stability is maintained by subtracting the per-row
+        maximum before exponentiation (detached so it does not alter
+        gradients).  A small epsilon guards the log against exact-zero
+        denominators in degenerate cases.
+
+        Anchors with no positives (e.g. singleton classes in a batch)
+        contribute zero to the mean, so the loss degrades gracefully in
+        edge cases.
+
+        Args:
+            patch_emb: L2-normalized patch embeddings, shape (N, proj_dim)
+                where N = B * num_patches_per_sample.  Typically the direct
+                output of :meth:`forward`.
+            labels: Integer class labels, one per source image, shape (B,).
+                Values must be in {0, 1, 2} (real / print_spoof / replay_spoof).
+            num_patches_per_sample: Number of spatial locations H*W extracted
+                in :meth:`forward` (e.g. 16 for a 4×4 feature map).
+
+        Returns:
+            Scalar loss tensor with gradient flowing back through
+            ``self.projector`` weights.  Returns 0.0 (with gradient) if no
+            anchor has a positive pair in the batch.
+        """
+        N = patch_emb.shape[0]
+        device = patch_emb.device
+
+        # --- 1. Expand per-image labels to per-patch labels ----------------
+        # Each of the B images contributes num_patches_per_sample patch tokens.
+        # All tokens from the same image share the same class label.
+        patch_labels = labels.repeat_interleave(num_patches_per_sample)  # (N,)
+
+        # --- 2. Similarity matrix ------------------------------------------
+        # patch_emb is already L2-normalized, so dot product == cosine sim.
+        # Divide by temperature immediately to avoid an extra pass.
+        sim = (patch_emb @ patch_emb.T) / self.temperature  # (N, N)
+
+        # --- 3. Numerical stability ----------------------------------------
+        # Subtract the row-wise maximum before exp().  The shift cancels in
+        # the log-softmax so it does not change the loss value, but prevents
+        # large exponentials.  .detach() stops gradient flow through the
+        # constant shift (correct per standard stable-softmax practice).
+        sim = sim - sim.max(dim=1, keepdim=True).values.detach()
+
+        # --- 4. Build masks ------------------------------------------------
+        eye = torch.eye(N, device=device, dtype=torch.bool)
+
+        # positive_mask[i, j] = True  iff  labels[i] == labels[j]  AND  i != j
+        label_equal = patch_labels.unsqueeze(0) == patch_labels.unsqueeze(1)  # (N, N)
+        positive_mask = label_equal & (~eye)  # (N, N) bool
+
+        # logits_mask excludes the diagonal from the denominator
+        logits_mask = ~eye  # (N, N) bool
+
+        # --- 5. Denominator (log-sum-exp over non-self entries) ------------
+        exp_sim = torch.exp(sim) * logits_mask  # zero diagonal (N, N)
+        log_denom = torch.log(exp_sim.sum(dim=1, keepdim=True) + 1e-12)  # (N, 1)
+
+        # --- 6. Per-anchor positive log-prob --------------------------------
+        log_prob = sim - log_denom                           # (N, N)
+        pos_log_prob = (log_prob * positive_mask).sum(dim=1)  # (N,)
+        pos_count = positive_mask.sum(dim=1).float()          # (N,)
+
+        # Per-anchor loss: -mean of positive log-probs.
+        # clamp(min=1) avoids division by zero for anchors with no positives;
+        # their contribution is forced to 0 via the has_pos mask below.
+        per_anchor_loss = -pos_log_prob / pos_count.clamp(min=1)  # (N,)
+
+        # --- 7. Mean over anchors that HAVE positives ----------------------
+        has_pos = pos_count > 0
+        if has_pos.any():
+            return per_anchor_loss[has_pos].mean()
+        else:
+            # Degenerate case: every class is a singleton — no positive pairs.
+            # Return a zero scalar that still participates in the autograd graph
+            # (requires_grad=True) so the caller's loss.backward() does not fail.
+            return torch.tensor(0.0, device=device, requires_grad=True)
