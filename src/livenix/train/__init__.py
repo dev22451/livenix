@@ -6,10 +6,13 @@ from livenix.train.losses import (
     CosineMarginLoss,
     FocalLoss,
 )
+from livenix.train.trainer import LivenixTrainer, TrainerConfig
 
 __all__ = [
     "AsymmetricLoss",
     "CombinedLoss",
     "CosineMarginLoss",
     "FocalLoss",
+    "LivenixTrainer",
+    "TrainerConfig",
 ]
