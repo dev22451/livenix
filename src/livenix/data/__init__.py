@@ -8,10 +8,12 @@ from livenix.data.deepfake_screen import (
 )
 from livenix.data.wmca import WMCADataset, WMCA_TO_LIVENIX_LABEL
 from livenix.data.hifimask import HiFiMaskDataset, HIFIMASK_TO_LIVENIX_LABEL
+from livenix.data.transforms import train_transforms, eval_transforms
 
 __all__ = [
     "CelebASpoofDataset", "CELEBA_SPOOF_TO_LIVENIX_LABEL",
     "DeepfakeScreenDataset", "DEEPFAKE_SCREEN_LABEL", "DEEPFAKE_SCREEN_ATTACK_TYPE",
     "WMCADataset", "WMCA_TO_LIVENIX_LABEL",
     "HiFiMaskDataset", "HIFIMASK_TO_LIVENIX_LABEL",
+    "train_transforms", "eval_transforms",
 ]
