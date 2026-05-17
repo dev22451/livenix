@@ -17,6 +17,7 @@ dependencies = [
     "tf-keras>=2.16.0",
     "onnx-graphsurgeon>=0.5.0",
     "sng4onnx>=1.0.0",
+    "keras>=3.0.0",
     "ai-edge-litert>=1.0.0; platform_system != 'Windows'",
     "coremltools>=8.0",
     "opencv-python>=4.10.0",
