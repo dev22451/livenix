@@ -40,6 +40,57 @@ Every task ends with **one commit** on `feature/<short-task-id>` branch (e.g. `f
 
 ---
 
+## Model dispatch matrix
+
+Each task is tagged with the recommended Implementer model. Verifier is always Opus.
+
+| Task | Implementer model | Verifier | Why |
+|---|---|---|---|
+| T1.1 — Fix TFLite deps | **Haiku** | Opus | Trivial dep addition |
+| T1.2 — Fix CoreML deps | **Haiku** | Opus | Small dep fix |
+| T1.3 — Re-run Gate 1 | **Haiku** | Opus | Run script + read output |
+| T1.4 — Banned-ops check | **Haiku** | Opus | Small script, well-specified |
+| T2.1 — FFTHead | **Sonnet** | Opus | Real NN code, judgment |
+| T2.2 — SigLIPDistillHead | **Sonnet** | Opus | HuggingFace integration |
+| T2.3 — PatchContrastiveHead | **Sonnet** | Opus | NN code |
+| T2.4 — Losses | **Sonnet** | Opus | Numerical correctness matters |
+| T2.5 — CelebA-Spoof loader | **Sonnet** | Opus | Multi-file + mapping logic |
+| T2.6 — WMCA loader | **Sonnet** | Opus | Same |
+| T2.7 — HiFiMask loader | **Sonnet** | Opus | Same |
+| T2.8 — Deepfake stub | **Haiku** | Opus | Stub only |
+| T2.9 — ISP transforms | **Sonnet** | Opus | Augmentation correctness |
+| T2.10 — Splits + audit | **Sonnet** | Opus | Algorithmic |
+| T2.11 — Trainer | **Sonnet** | Opus | Complex, multi-file |
+| T2.12 — Gate 2 overfit | **Sonnet** | Opus | Judgment on convergence |
+| T2.13 — Dataset acquisition | manual (human) | Opus (file check) | Outside Claude — EULA process |
+| T2.14 — First training | **Sonnet** | Opus | Live GPU run, requires judgment |
+| T3.1 — Metrics | **Sonnet** | Opus | Correctness of formulas |
+| T3.2 — Gate 3 convergence | **Sonnet** | **Opus (heavy)** | Real KPI evaluation |
+| T3.3 — Gate 4 LODO | **Sonnet** | **Opus (heavy)** | Cross-domain reading |
+| T3.4 — Gate 7 OULU | **Sonnet** | **Opus (heavy)** | Benchmark interpretation |
+| T4.1 — Tuning | **Sonnet** | Opus | Multiple runs, picks best |
+| T4.2 — Gate 5 fairness | **Sonnet** | **Opus (heavy)** | Demographic analysis |
+| T4.3 — Gate 6 adversarial | **Sonnet** | Opus | Robustness numbers |
+| T5.1 — INT8 PTQ | **Sonnet** | Opus | Quantization correctness |
+| T5.2 — QAT fallback | **Sonnet** | Opus | Conditional |
+| T5.3 — Full export + parity | **Sonnet** | Opus | Cross-runtime |
+| T5.4 — Golden test | **Sonnet** | Opus | End-to-end |
+| T6.1 — Webcam demo | **Sonnet** | Opus | UI code |
+| T6.2 — Web demo | **Sonnet** | Opus | JS + ONNX RT Web |
+| T6.3 — THREAT_MODEL.md | **Sonnet** | **Opus (heavy)** | Writing + cross-ref to claims |
+| T6.4 — eval_report.md | **Sonnet** | **Opus (heavy)** | Synthesis of all numbers |
+| T6.5 — Phase 1 handoff | **Sonnet** | **Opus (heavy)** | Final audit |
+| T7.1 — Conv-Large training | **Sonnet** | Opus | Same as T2.14 |
+| T7.2 — FastAPI server | **Sonnet** | Opus | Server code |
+| T7.3 — Active liveness | **Sonnet** | Opus | Platform SDK integration |
+| T7.4 — Anti-injection | **Sonnet** | **Opus (heavy)** | Security-critical |
+
+**"Opus (heavy)" tag** = verifier needs to read multiple files and cross-reference; budget more tokens for that verification.
+
+See [RUNNER_PROTOCOL.md](RUNNER_PROTOCOL.md) for how the dispatcher invokes these.
+
+---
+
 ## TASKS
 
 ### Week 1 — Finish QA Gate 1
