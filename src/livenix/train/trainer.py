@@ -285,6 +285,43 @@ class LivenixTrainer:
         loss_dict = self._forward_batch(images, labels)
         return {k: v.item() if torch.is_tensor(v) else v for k, v in loss_dict.items()}
 
+    @torch.no_grad()
+    def eval_classification_accuracy(
+        self, loader: DataLoader, *, use_train_mode: bool = False
+    ) -> float:
+        """Mean accuracy of argmax main-head predictions vs labels.
+
+        Supported only when ``main_head`` is used (focal / asymmetric).
+        Cosine-margin mode has no separate logits head — do not use here.
+
+        Args:
+            use_train_mode: If True, run the backbone/head in train mode so
+                BatchNorm uses batch statistics (appropriate for small-set
+                overfit checks where eval-mode running stats are misleading).
+        """
+        if self.main_head is None:
+            raise ValueError(
+                "eval_classification_accuracy requires MainHead (focal/asymmetric); "
+                "cosine_margin mode is not supported."
+            )
+        if use_train_mode:
+            self._set_train_mode()
+        else:
+            self._set_eval_mode()
+        correct = 0
+        total = 0
+        for batch in loader:
+            images, labels = batch[0], batch[1]
+            images = images.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
+            feat_map = self.backbone(images)
+            pooled = feat_map.mean(dim=(2, 3))
+            logits = self.main_head(pooled)
+            pred = logits.argmax(dim=-1)
+            correct += (pred == labels).sum().item()
+            total += int(labels.numel())
+        return correct / max(total, 1)
+
     def fit(self):
         """Run training for cfg.epochs epochs."""
         train_loader = DataLoader(
