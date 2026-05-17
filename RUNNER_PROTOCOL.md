@@ -61,11 +61,36 @@
 
 ---
 
-## Branch naming
+## Branch model (locked: develop + short-lived feature branches)
 
-- Implementer work: `feature/<t-id-slug>` e.g. `feature/t1.1-tflite-deps`
-- Status updates: committed on the integration branch (currently `feature/week-1-scaffold` or its successor)
-- Each task = exactly **one Implementer commit** + **one status-update commit** from Dispatcher
+```
+main                        (stable, releases only — empty for now)
+└── develop                 (integration — all in-progress work lives here)
+     │
+     └── feature/<t-id-slug>  (short-lived, ONE per task, deleted after merge)
+```
+
+### Per-task branch lifecycle
+
+1. **Dispatcher** creates the branch off develop:
+   `git checkout develop && git checkout -b feature/<t-id-slug>`
+2. **Implementer** does its work, commits on the feature branch
+3. **Dispatcher** verifies, then merges back to develop with `--no-ff`:
+   `git checkout develop && git merge --no-ff feature/<t-id-slug> -m "Merge T<X.Y>: <subject>"`
+4. **Dispatcher** deletes the feature branch:
+   `git branch -d feature/<t-id-slug>`
+
+After a task: `git branch` shows just `main` + `develop` + (at most) the next active task's feature branch.
+
+### Why --no-ff for the merge
+
+Each merge commit on develop documents "task T-X.Y landed at this point." If we used fast-forward, the merge commit vanishes and develop just shows a linear stream of cherry-picks — harder to read what was a discrete task.
+
+### Branch naming convention
+
+- `feature/<t-id-slug>` for task work (e.g. `feature/t2.3-patch-contrastive-head`)
+- `fix/<short-desc>` for hotfixes that aren't tied to a numbered task
+- `docs/<short-desc>` for doc-only changes
 
 ---
 
