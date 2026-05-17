@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# uv
+.uv/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ML artifacts (kept out of git — large + reproducible)
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.tflite
+*.mlpackage/
+*.mlmodel
+*.ncnn
+*.bin
+*.param
+*.safetensors
+
+# Datasets (never committed)
+datasets/
+data/
+*.h5
+*.hdf5
+
+# Logs
+runs/
+logs/
+wandb/
+lightning_logs/
+tb_logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
