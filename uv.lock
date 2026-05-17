@@ -1071,6 +1071,7 @@ dependencies = [
     { name = "psutil" },
     { name = "pyyaml" },
     { name = "sng4onnx" },
+    { name = "tensorboard" },
     { name = "tensorflow", version = "2.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "tensorflow", version = "2.21.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "tf-keras", version = "2.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
@@ -1089,7 +1090,6 @@ dev = [
 ]
 train = [
     { name = "pytorch-lightning" },
-    { name = "tensorboard" },
     { name = "transformers" },
 ]
 
@@ -1114,7 +1114,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
     { name = "sng4onnx", specifier = ">=1.0.0" },
-    { name = "tensorboard", marker = "extra == 'train'", specifier = ">=2.16.0" },
+    { name = "tensorboard", specifier = ">=2.16.0" },
     { name = "tensorflow", specifier = ">=2.16.0" },
     { name = "tf-keras", specifier = ">=2.16.0" },
     { name = "timm", specifier = ">=1.0.7" },
