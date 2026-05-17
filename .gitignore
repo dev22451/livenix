@@ -32,9 +32,9 @@ dist/
 *.param
 *.safetensors
 
-# Datasets (never committed)
-datasets/
-data/
+# Datasets (never committed) — top-level only, NOT src/livenix/data/
+/datasets/
+/data/
 *.h5
 *.hdf5
 
