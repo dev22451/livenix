@@ -1,0 +1,23 @@
+# Livenix server variant — MobileNetV4-Conv-Large.
+# Phase 1.5: private server-side weights, authoritative scoring.
+
+variant: server_large
+
+model:
+  backbone_name: mobilenetv4_conv_large.e600_r384_in1k
+  pretrained_backbone: false
+  cdc_theta: 0.7
+  dropout: 0.1
+  input_size: [128, 128]
+  num_classes: 3
+
+training:
+  epochs: 30
+  batch_size: 128  # larger model, smaller batch
+  lr: 2.0e-4
+
+export:
+  # Server runs FP16/FP32 directly — no INT8 quantization needed.
+  onnx_opset: 17
+  int8_quantization: false
+  target_runtime: onnxruntime_server

@@ -1,0 +1,26 @@
+# Livenix web variant — 0.5× width MobileNetV4-Conv-Small.
+# Optimized for browser inference via ONNX Runtime Web.
+
+variant: web_small
+
+model:
+  backbone_name: mobilenetv4_conv_small.e2400_r224_in1k
+  pretrained_backbone: false
+  cdc_theta: 0.7
+  dropout: 0.1
+  input_size: [128, 128]
+  num_classes: 3
+  # Note: Phase 1 ships the same Conv-Small for both variants; the 0.5× width
+  # variant will be enabled in Week 4 by passing a width-multiplier-adjusted
+  # backbone name once timm exposes one. For Week 1, this config is structurally
+  # identical to mobile_small.yaml.
+
+training:
+  epochs: 30
+  batch_size: 256
+  lr: 3.0e-4
+
+export:
+  onnx_opset: 17
+  int8_quantization: true
+  target_runtime: onnxruntime_web

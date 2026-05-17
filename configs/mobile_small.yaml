@@ -1,0 +1,32 @@
+# Livenix mobile variant — MobileNetV4-Conv-Small
+# Used Phase 1 for on-device inference.
+
+variant: mobile_small
+
+model:
+  backbone_name: mobilenetv4_conv_small.e2400_r224_in1k
+  pretrained_backbone: false  # Phase 1 trains from scratch (research prototype)
+  cdc_theta: 0.7
+  dropout: 0.1
+  input_size: [128, 128]
+  num_classes: 3  # real / print_spoof / replay_spoof
+
+training:
+  # Implemented in Week 2; values are placeholders for now.
+  epochs: 30
+  batch_size: 256
+  lr: 3.0e-4
+  optimizer: adamw
+  scheduler: cosine
+  weight_decay: 0.05
+  focal_gamma: 2.0
+  aux_weights:
+    siglip_distill: 0.5
+    fft_branch: 0.2
+    patch_contrastive: 0.3
+  cosine_margin: 0.3
+
+export:
+  onnx_opset: 17
+  int8_quantization: true   # Week 5
+  qat_fallback: true        # If PTQ accuracy drop > 1%
