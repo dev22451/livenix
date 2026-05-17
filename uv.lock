@@ -1061,11 +1061,13 @@ dependencies = [
     { name = "numpy" },
     { name = "onnx", version = "1.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "onnx", version = "1.21.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "onnx-graphsurgeon" },
     { name = "onnx2tf" },
     { name = "onnxruntime" },
     { name = "opencv-python" },
     { name = "pillow" },
     { name = "pyyaml" },
+    { name = "sng4onnx" },
     { name = "tensorflow", version = "2.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "tensorflow", version = "2.21.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "tf-keras", version = "2.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
@@ -1096,6 +1098,7 @@ requires-dist = [
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "numpy", specifier = ">=1.26.0,<2.0" },
     { name = "onnx", specifier = ">=1.16.0" },
+    { name = "onnx-graphsurgeon", specifier = ">=0.5.0" },
     { name = "onnx2tf", specifier = ">=1.22.0" },
     { name = "onnxruntime", specifier = ">=1.18.0" },
     { name = "opencv-python", specifier = ">=4.10.0" },
@@ -1104,6 +1107,7 @@ requires-dist = [
     { name = "pytorch-lightning", marker = "extra == 'train'", specifier = ">=2.3.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5.0" },
+    { name = "sng4onnx", specifier = ">=1.0.0" },
     { name = "tensorboard", marker = "extra == 'train'", specifier = ">=2.16.0" },
     { name = "tensorflow", specifier = ">=2.16.0" },
     { name = "tf-keras", specifier = ">=2.16.0" },
@@ -1720,6 +1724,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/cf/cf/5d13320eb3660d5af360ea3b43aa9c63a70c92a9b4d1ea0d34501a32fcb8/onnx-1.21.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:db17fc0fec46180b6acbd1d5d8650a04e5527c02b09381da0b5b888d02a204c8", size = 17617662, upload-time = "2026-03-27T21:33:27.418Z" },
     { url = "https://files.pythonhosted.org/packages/4d/50/3eaa1878338247be021e6423696813d61e77e534dccbd15a703a144e703d/onnx-1.21.0-cp314-cp314t-win_amd64.whl", hash = "sha256:19d9971a3e52a12968ae6c70fd0f86c349536de0b0c33922ecdbe52d1972fe60", size = 16463688, upload-time = "2026-03-27T21:33:30.229Z" },
     { url = "https://files.pythonhosted.org/packages/a7/48/38d46b43bbb525e0b6a4c2c4204cc6795d67e45687a2f7403e06d8e7053d/onnx-1.21.0-cp314-cp314t-win_arm64.whl", hash = "sha256:efba467efb316baf2a9452d892c2f982b9b758c778d23e38c7f44fa211b30bb9", size = 16423387, upload-time = "2026-03-27T21:33:33.446Z" },
+]
+
+[[package]]
+name = "onnx-graphsurgeon"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes", version = "0.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "ml-dtypes", version = "0.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "numpy" },
+    { name = "onnx", version = "1.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "onnx", version = "1.21.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/da/aae4506866bdd18612be95bdd95150714dc14c70ed9d83561b00bc7bd29f/onnx_graphsurgeon-0.6.1-py2.py3-none-any.whl", hash = "sha256:fabc53fc60909dd032cfd889016dd5d4139ab566af4a9039002818f552c73547", size = 59337, upload-time = "2026-04-08T19:29:29.678Z" },
 ]
 
 [[package]]
@@ -2808,6 +2827,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "sng4onnx"
+version = "2.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/b2/7ecba71e1639b4e6e17abf52d1f9632c48dd64629e49b9d2524ea6b8ecaa/sng4onnx-2.0.1.tar.gz", hash = "sha256:698269a4315c5e8ae242f5d54df7ecdf1b1b07317b15e0e91257893b473e7409", size = 11630, upload-time = "2026-02-24T12:52:18.815Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b8/51/3811b2e41946dade6f7c79d015b37d6dcbb867bfcb7551ab844b3f88d4bf/sng4onnx-2.0.1-py3-none-any.whl", hash = "sha256:3bcbdaf79c8c4f107a340802f9562620ac5b3c83b3b8e8d08a553276d754168f", size = 11084, upload-time = "2026-02-24T12:52:17.811Z" },
 ]
 
 [[package]]
