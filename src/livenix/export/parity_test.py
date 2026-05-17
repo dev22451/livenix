@@ -69,7 +69,7 @@ def _run_coreml(mlpackage_path: Path, x: np.ndarray) -> np.ndarray:
     import coremltools as ct
 
     mlmodel = ct.models.MLModel(str(mlpackage_path))
-    inp_name = list(mlmodel.input_description._fd_spec)[0]
+    inp_name = mlmodel.get_spec().description.input[0].name
 
     outs = []
     for i in range(x.shape[0]):

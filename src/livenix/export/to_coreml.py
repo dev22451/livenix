@@ -52,6 +52,7 @@ def export_to_coreml(
         convert_to="mlprogram",
         minimum_deployment_target=target,
         compute_units=ct.ComputeUnit.ALL,
+        compute_precision=ct.precision.FLOAT32,
     )
 
     mlmodel.save(str(output_path))

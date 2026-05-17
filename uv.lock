@@ -1065,8 +1065,10 @@ dependencies = [
     { name = "onnx-graphsurgeon" },
     { name = "onnx2tf" },
     { name = "onnxruntime" },
+    { name = "onnxscript" },
     { name = "opencv-python" },
     { name = "pillow" },
+    { name = "psutil" },
     { name = "pyyaml" },
     { name = "sng4onnx" },
     { name = "tensorflow", version = "2.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
@@ -1103,8 +1105,10 @@ requires-dist = [
     { name = "onnx-graphsurgeon", specifier = ">=0.5.0" },
     { name = "onnx2tf", specifier = ">=1.22.0" },
     { name = "onnxruntime", specifier = ">=1.18.0" },
+    { name = "onnxscript", specifier = ">=0.1.0" },
     { name = "opencv-python", specifier = ">=4.10.0" },
     { name = "pillow", specifier = ">=10.0.0" },
+    { name = "psutil", specifier = ">=5.4.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytorch-lightning", marker = "extra == 'train'", specifier = ">=2.3.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
@@ -1744,6 +1748,23 @@ wheels = [
 ]
 
 [[package]]
+name = "onnx-ir"
+version = "0.1.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes", version = "0.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "ml-dtypes", version = "0.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "numpy" },
+    { name = "onnx", version = "1.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "onnx", version = "1.21.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/af/4a/7ea3952e556e7281b8bfe7f7fce016a13fdac85544d6d6af8ebca5cae160/onnx_ir-0.1.8.tar.gz", hash = "sha256:85ea59eaf165b2b107788193480a260e2723cfc7a1dac1bde7085fd0b7e380d7", size = 108961, upload-time = "2025-09-05T15:45:33.887Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/1c/3bb51fa9e278cbc655a1943c8016163d76a6e24137e73e5198ebc20fc965/onnx_ir-0.1.8-py3-none-any.whl", hash = "sha256:61a42021b6249e566ff3b89a03342bc88dce4dc2d984b97cfb060f33ef179f8a", size = 125316, upload-time = "2025-09-05T15:45:31.211Z" },
+]
+
+[[package]]
 name = "onnx2tf"
 version = "1.28.8"
 source = { registry = "https://pypi.org/simple" }
@@ -1788,6 +1809,25 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/19/e4/0f9d1a5718b1781c610c1e354765a3820597081754277a6a9a2b50705702/onnxruntime-1.26.0-cp314-cp314-win_arm64.whl", hash = "sha256:31d71a53490e46910877d0902b5ad99c69a5955e5c7ea6c82863519410e1ba7c", size = 13140121, upload-time = "2026-05-08T19:07:57.804Z" },
     { url = "https://files.pythonhosted.org/packages/1c/42/3b8e635f067d06d9f45bede470b8d539d101a4166c272213158dfd08b6ce/onnxruntime-1.26.0-cp314-cp314t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:d7b6d258fb78fdfcf049795bcfaa74dcb90ae7baa277afd21e6fd28b83f2c496", size = 16057240, upload-time = "2026-05-08T19:07:25.163Z" },
     { url = "https://files.pythonhosted.org/packages/93/99/f2be40a31b908d96b861ae0ce98582fa376c18a7f816b9d5eb4cd6aa0a4c/onnxruntime-1.26.0-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4eefd386a45202aefb7a5132b94f32df9d506c9edcc7faf2fc60d65183f4b183", size = 18197382, upload-time = "2026-05-08T19:07:46.965Z" },
+]
+
+[[package]]
+name = "onnxscript"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ml-dtypes", version = "0.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "ml-dtypes", version = "0.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "numpy" },
+    { name = "onnx", version = "1.19.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "onnx", version = "1.21.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
+    { name = "onnx-ir" },
+    { name = "packaging" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/2f/0bb2b6ca727e4d5173f640527f402ab4225def4bc8d667269b83047be8c4/onnxscript-0.5.0.tar.gz", hash = "sha256:4aba215e1f80fbcd07ba0d97d6bca96797fc3e9639eacb5434d35317ce1406aa", size = 588762, upload-time = "2025-09-12T16:57:46.484Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/f7/f0eb0b10771637a8c176a3b0594c65c5ba3cea440847741297901cef2c5e/onnxscript-0.5.0-py3-none-any.whl", hash = "sha256:da33715ac8ec80e0263a5200f1ad1b3532225804c05a13a0d6ea83712b5b4a8f", size = 684685, upload-time = "2025-09-12T16:57:48.869Z" },
 ]
 
 [[package]]
