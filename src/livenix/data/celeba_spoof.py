@@ -187,6 +187,59 @@ def _parse_spoof_type(sidecar: Path) -> int | None:
         return None
 
 
+class CelebASpoofCropDataset(Dataset):
+    """Loader for the pre-cropped CelebA-Spoof variant (immada/celeba-spoof-crop).
+
+    Structure: <root>/CelebA_Spoof/<split>/live/*.jpg  (label 0 — real)
+               <root>/CelebA_Spoof/<split>/spoof/*.jpg (label 1 — print_spoof)
+
+    Only two classes available (no replay distinction) — sufficient for a
+    first baseline training run. Use CelebASpoofDataset for full 3-class.
+    """
+
+    IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp"}
+
+    def __init__(
+        self,
+        root: str | Path,
+        split: str = "train",
+        transform: Callable | None = None,
+    ) -> None:
+        super().__init__()
+        self.root = Path(root)
+        self.split = split
+        self.transform = transform
+        self.samples: list[tuple[Path, int]] = self._discover()
+
+    def _discover(self) -> list[tuple[Path, int]]:
+        base = self.root / "CelebA_Spoof" / self.split
+        if not base.is_dir():
+            # fallback: try split directly under root
+            base = self.root / self.split
+        if not base.is_dir():
+            return []
+        samples = []
+        for label, subdir in ((0, "live"), (1, "spoof")):
+            d = base / subdir
+            if not d.is_dir():
+                continue
+            for p in sorted(d.iterdir()):
+                if p.suffix.lower() in self.IMG_EXTS:
+                    samples.append((p, label))
+        return samples
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int) -> tuple:
+        img_path, label = self.samples[idx]
+        with Image.open(img_path) as im:
+            im = im.convert("RGB")
+        if self.transform is not None:
+            im = self.transform(im)
+        return im, label, label  # third element = attack_type_int (same as label here)
+
+
 def write_fake_sample(
     root: Path,
     subject_id: str,

@@ -1,6 +1,6 @@
 """Data loaders and preprocessing. Implemented in Week 2."""
 
-from livenix.data.celeba_spoof import CelebASpoofDataset, CELEBA_SPOOF_TO_LIVENIX_LABEL
+from livenix.data.celeba_spoof import CelebASpoofDataset, CelebASpoofCropDataset, CELEBA_SPOOF_TO_LIVENIX_LABEL
 from livenix.data.deepfake_screen import (
     DeepfakeScreenDataset,
     DEEPFAKE_SCREEN_LABEL,
@@ -18,7 +18,7 @@ from livenix.data.splits import (
 )
 
 __all__ = [
-    "CelebASpoofDataset", "CELEBA_SPOOF_TO_LIVENIX_LABEL",
+    "CelebASpoofDataset", "CelebASpoofCropDataset", "CELEBA_SPOOF_TO_LIVENIX_LABEL",
     "DeepfakeScreenDataset", "DEEPFAKE_SCREEN_LABEL", "DEEPFAKE_SCREEN_ATTACK_TYPE",
     "WMCADataset", "WMCA_TO_LIVENIX_LABEL",
     "HiFiMaskDataset", "HIFIMASK_TO_LIVENIX_LABEL",

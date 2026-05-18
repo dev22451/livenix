@@ -100,7 +100,8 @@ def main():
 
     # Lazy imports so --help is fast and missing deps don't crash CLI parse
     from livenix.data import (
-        CelebASpoofDataset, WMCADataset, HiFiMaskDataset, DeepfakeScreenDataset,
+        CelebASpoofDataset, CelebASpoofCropDataset,
+        WMCADataset, HiFiMaskDataset, DeepfakeScreenDataset,
         train_transforms, eval_transforms,
     )
     from livenix.train.trainer import LivenixTrainer, TrainerConfig
@@ -127,8 +128,13 @@ def main():
     # ---- Datasets ----
     print("\n[datasets — train split]")
     train_parts: list[Dataset] = []
+    # Try full CelebA-Spoof first; fall back to pre-cropped variant
+    celeba_ds = _build_dataset("CelebA", CelebASpoofDataset, args.celeba_root, "train", train_tf)
+    if celeba_ds is None and args.celeba_root:
+        celeba_ds = _build_dataset("CelebA-Crop", CelebASpoofCropDataset, args.celeba_root, "test", train_tf)
+    if celeba_ds is not None:
+        train_parts.append(celeba_ds)
     for name, klass, root, split in [
-        ("CelebA",   CelebASpoofDataset,    args.celeba_root,   "train"),
         ("WMCA",     WMCADataset,           args.wmca_root,     "train"),
         ("HiFiMask", HiFiMaskDataset,       args.hifimask_root, "train"),
     ]:
@@ -151,8 +157,12 @@ def main():
 
     print("\n[datasets — val split]")
     val_parts: list[Dataset] = []
+    celeba_val = _build_dataset("CelebA", CelebASpoofDataset, args.celeba_root, "test", eval_tf)
+    if celeba_val is None and args.celeba_root:
+        celeba_val = _build_dataset("CelebA-Crop", CelebASpoofCropDataset, args.celeba_root, "test", eval_tf)
+    if celeba_val is not None:
+        val_parts.append(celeba_val)
     for name, klass, root, split in [
-        ("CelebA",   CelebASpoofDataset,    args.celeba_root,   "test"),
         ("WMCA",     WMCADataset,           args.wmca_root,     "dev"),
         ("HiFiMask", HiFiMaskDataset,       args.hifimask_root, "test"),
     ]:
