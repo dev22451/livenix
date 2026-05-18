@@ -12,7 +12,6 @@ import yaml
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Dataset
-from torch.utils.tensorboard import SummaryWriter
 
 from livenix.models.backbone import LivenixBackbone
 from livenix.models.heads import (
@@ -215,6 +214,7 @@ class LivenixTrainer:
         # Logging & checkpoints
         self.output_dir = Path(config.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        from torch.utils.tensorboard import SummaryWriter  # lazy: avoids TF init on import
         self.writer = SummaryWriter(str(self.output_dir / "tb"))
         self._last_save_time = time.time()
         self.best_val_loss = float("inf")
