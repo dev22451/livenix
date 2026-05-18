@@ -96,6 +96,7 @@ def main():
     parser.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])
     parser.add_argument("--no-siglip", action="store_true", help="Skip SigLIP teacher (faster smoke runs)")
     parser.add_argument("--max-train-samples", type=int, default=None, help="Cap train samples (debug)")
+    parser.add_argument("--max-val-samples", type=int, default=None, help="Cap val samples (debug)")
     args = parser.parse_args()
 
     # Lazy imports so --help is fast and missing deps don't crash CLI parse
@@ -170,6 +171,9 @@ def main():
         if ds is not None:
             val_parts.append(ds)
     val_ds: Dataset | None = ConcatDataset(val_parts) if val_parts else None
+    if val_ds is not None and args.max_val_samples is not None:
+        from torch.utils.data import Subset
+        val_ds = Subset(val_ds, range(min(args.max_val_samples, len(val_ds))))
     print(f"[total] val samples: {len(val_ds) if val_ds else 0}")
 
     # ---- SigLIP teacher ----
