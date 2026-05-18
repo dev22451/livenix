@@ -17,7 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import torch
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from torch import Tensor
 from torch.utils.data import Dataset
 
@@ -232,12 +232,19 @@ class CelebASpoofCropDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> tuple:
-        img_path, label = self.samples[idx]
-        with Image.open(img_path) as im:
-            im = im.convert("RGB")
-        if self.transform is not None:
-            im = self.transform(im)
-        return im, label, label  # third element = attack_type_int (same as label here)
+        attempts = 0
+        n = len(self.samples)
+        while attempts < n:
+            img_path, label = self.samples[(idx + attempts) % n]
+            try:
+                with Image.open(img_path) as im:
+                    im = im.convert("RGB")
+                if self.transform is not None:
+                    im = self.transform(im)
+                return im, label, label
+            except (UnidentifiedImageError, OSError):
+                attempts += 1
+        raise RuntimeError("CelebASpoofCropDataset: all samples unreadable")
 
 
 def write_fake_sample(
