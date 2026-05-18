@@ -114,10 +114,9 @@ class FFTHead(nn.Module):
             nn.BatchNorm2d(mid),
             nn.ReLU(inplace=True),
         )
-        # Final block: 1-channel output + sigmoid to bound to [0, 1]
+        # Final block: 1-channel output (logits — sigmoid applied in loss)
         self.block3 = nn.Sequential(
             nn.Conv2d(mid, 1, kernel_size=3, padding=1, bias=False),
-            nn.Sigmoid(),
         )
 
     def forward(self, feat_map: Tensor) -> Tensor:
@@ -218,7 +217,7 @@ class FFTHead(nn.Module):
         Returns:
             Scalar tensor (mean BCE over the batch).
         """
-        return F.binary_cross_entropy(pred, target)
+        return F.binary_cross_entropy_with_logits(pred, target)
 
 
 class SigLIPDistillHead(nn.Module):
