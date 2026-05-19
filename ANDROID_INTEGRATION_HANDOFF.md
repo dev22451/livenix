@@ -40,7 +40,7 @@ runs/v0.1-binary/checkpoint_best.pth        ← original PyTorch weights
 | Input name | `input` |
 | Input shape | `(1, 3, 128, 128)` — NCHW, batch dynamic |
 | Input dtype | float32 |
-| Input range | `(pixel/255.0 - 0.5) / 0.5` → roughly [-1, 1] |
+| Input range | ImageNet normalization (see below) — **NOT [-1,1]** |
 | Output name | `logits` |
 | Output shape | `(1, 2)` |
 | Output | Raw logits — apply softmax for probabilities |
@@ -48,16 +48,30 @@ runs/v0.1-binary/checkpoint_best.pth        ← original PyTorch weights
 | Class 1 | `spoof` (print, replay, paper mask, etc.) |
 
 ### Inference pseudocode (any language)
-```
-face_bbox = run_face_detector(camera_frame)   # ML Kit / MediaPipe
-crop = crop_and_resize(camera_frame, face_bbox, 128, 128)
-normalized = (crop / 255.0 - 0.5) / 0.5
-input_tensor = normalized.transpose(HWC -> NCHW)  # shape (1,3,128,128)
 
-logits = onnx_model.run(input_tensor)
-probs = softmax(logits)
-is_real = probs[0] > 0.5   # or use a tuned threshold like 0.7
+> ⚠️ **CRITICAL**: the model is trained with **ImageNet** normalization,
+> NOT `(x-0.5)/0.5`. Using the wrong norm produces near-random outputs.
+> A previous version of this doc had this bug — confirmed on Android
+> deployment 2026-05-20.
+
 ```
+IMAGENET_MEAN = [0.485, 0.456, 0.406]   # RGB order
+IMAGENET_STD  = [0.229, 0.224, 0.225]
+
+face_bbox = run_face_detector(camera_frame)            # ML Kit / MediaPipe
+crop = crop_and_resize(camera_frame, face_bbox, 128, 128)  # uint8 HWC RGB
+
+x = crop.astype(float32) / 255.0                       # [0, 1]
+x = (x - IMAGENET_MEAN) / IMAGENET_STD                 # per-channel
+x = x.transpose(HWC -> CHW).expand_dims(batch=0)       # (1, 3, 128, 128)
+
+logits = onnx_model.run(x)                             # (1, 2)
+probs  = softmax(logits)                               # [P_real, P_spoof]
+is_real = probs[0] > THRESHOLD                         # 0.6-0.7 tuned per device
+```
+
+**Color order:** ML Kit / Android Bitmaps give you ARGB. Strip alpha and
+ensure RGB order (NOT BGR) before normalizing.
 
 ---
 
