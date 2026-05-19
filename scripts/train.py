@@ -97,6 +97,7 @@ def main():
     parser.add_argument("--no-siglip", action="store_true", help="Skip SigLIP teacher (faster smoke runs)")
     parser.add_argument("--max-train-samples", type=int, default=None, help="Cap train samples (debug)")
     parser.add_argument("--max-val-samples", type=int, default=None, help="Cap val samples (debug)")
+    parser.add_argument("--num-classes", type=int, default=None, help="Override num_classes in config (2 for binary, 3 default)")
     args = parser.parse_args()
 
     # Lazy imports so --help is fast and missing deps don't crash CLI parse
@@ -113,6 +114,8 @@ def main():
     cfg.device = args.device
     if args.no_siglip:
         cfg.use_siglip = False
+    if args.num_classes is not None:
+        cfg.num_classes = args.num_classes
 
     # Resolve device early so SigLIP teacher lands on the right one
     if cfg.device == "auto":

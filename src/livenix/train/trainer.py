@@ -163,11 +163,11 @@ class LivenixTrainer:
             ).to(self.device)
             self.main_uses_features = True
         elif config.main_loss == "asymmetric":
-            self.main_head = MainHead(feat_dim, dropout=config.dropout).to(self.device)
+            self.main_head = MainHead(feat_dim, dropout=config.dropout, num_classes=config.num_classes).to(self.device)
             self.main_loss_fn = AsymmetricLoss().to(self.device)
             self.main_uses_features = False
         else:  # focal (default)
-            self.main_head = MainHead(feat_dim, dropout=config.dropout).to(self.device)
+            self.main_head = MainHead(feat_dim, dropout=config.dropout, num_classes=config.num_classes).to(self.device)
             self.main_loss_fn = FocalLoss(gamma=config.focal_gamma).to(self.device)
             self.main_uses_features = False
 

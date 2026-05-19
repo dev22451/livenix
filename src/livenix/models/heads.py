@@ -21,20 +21,21 @@ from torch import Tensor
 
 
 class MainHead(nn.Module):
-    """3-class classifier head.
+    """Classifier head — 3-class by default, 2-class supported.
 
     Args:
         in_features: number of input features after global pooling.
-        num_classes: 3 (real, print_spoof, replay_spoof).
+        num_classes: 3 (real, print_spoof, replay_spoof) or 2 (real, spoof).
         dropout: optional dropout before the linear layer.
     """
 
-    NUM_CLASSES = 3
+    NUM_CLASSES = 3  # kept for backwards-compat with existing tests
 
-    def __init__(self, in_features: int, dropout: float = 0.1) -> None:
+    def __init__(self, in_features: int, dropout: float = 0.1, num_classes: int = 3) -> None:
         super().__init__()
+        self.num_classes = num_classes
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
-        self.fc = nn.Linear(in_features, self.NUM_CLASSES)
+        self.fc = nn.Linear(in_features, num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.fc(self.dropout(x))
