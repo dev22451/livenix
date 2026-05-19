@@ -342,34 +342,63 @@ class LivenixTrainer:
                 collate_fn=_default_collate,
             )
 
+        steps_per_epoch = max(1, len(self.train_ds) // self.cfg.batch_size)
+        val_batches = (len(self.val_ds) // self.cfg.batch_size) if val_loader is not None else 0
+        print(f"[fit] {self.cfg.epochs} epochs × {steps_per_epoch} steps/epoch, "
+              f"val_batches={val_batches}, batch_size={self.cfg.batch_size}", flush=True)
+
+        last_heartbeat = time.time()
+        HEARTBEAT_SEC = 30
+
         for epoch in range(self.cfg.epochs):
+            epoch_start = time.time()
+            print(f"\n[epoch {epoch+1}/{self.cfg.epochs}] starting train…", flush=True)
             self._set_train_mode()
+            step_in_epoch = 0
             for batch in train_loader:
                 metrics = self.train_step(batch)
                 self.global_step += 1
+                step_in_epoch += 1
                 if self.global_step % self.cfg.log_every_steps == 0:
                     self._log_metrics(metrics, prefix="train")
-                # time-based checkpoint
+                    print(f"  [train] ep={epoch+1} step={step_in_epoch}/{steps_per_epoch} "
+                          f"loss={metrics['total']:.4f}", flush=True)
+                if (time.time() - last_heartbeat) >= HEARTBEAT_SEC:
+                    print(f"  [hb] ep={epoch+1} step={step_in_epoch}/{steps_per_epoch} "
+                          f"loss={metrics['total']:.4f} elapsed={time.time()-epoch_start:.0f}s", flush=True)
+                    last_heartbeat = time.time()
                 if (time.time() - self._last_save_time) >= (self.cfg.save_every_minutes * 60):
                     self._save_checkpoint(f"checkpoint_step_{self.global_step}.pth")
                     self._last_save_time = time.time()
+            train_time = time.time() - epoch_start
 
             if val_loader is not None:
+                print(f"[epoch {epoch+1}] train done ({train_time:.0f}s), starting val on {val_batches} batches…", flush=True)
+                val_start = time.time()
                 self._set_eval_mode()
                 val_losses = []
-                for batch in val_loader:
+                for i, batch in enumerate(val_loader):
                     val_losses.append(self.val_step(batch))
+                    if (time.time() - last_heartbeat) >= HEARTBEAT_SEC:
+                        print(f"  [val hb] ep={epoch+1} batch={i+1}/{val_batches} "
+                              f"elapsed={time.time()-val_start:.0f}s", flush=True)
+                        last_heartbeat = time.time()
                 if val_losses:
                     avg = {
                         k: sum(d[k] for d in val_losses) / len(val_losses)
                         for k in val_losses[0]
                     }
                     self._log_metrics(avg, prefix="val", step=self.global_step)
+                    val_time = time.time() - val_start
+                    print(f"[epoch {epoch+1}] val done ({val_time:.0f}s) val_loss={avg['total']:.4f} "
+                          f"best_so_far={self.best_val_loss:.4f}", flush=True)
                     if avg["total"] < self.best_val_loss:
                         self.best_val_loss = avg["total"]
                         self._save_checkpoint("checkpoint_best.pth")
+                        print(f"  [ckpt] saved checkpoint_best.pth (val_loss={avg['total']:.4f})", flush=True)
 
             self.scheduler.step()
+            print(f"[epoch {epoch+1}/{self.cfg.epochs}] DONE total={time.time()-epoch_start:.0f}s", flush=True)
 
         self._save_checkpoint("checkpoint_final.pth")
         self.writer.close()
