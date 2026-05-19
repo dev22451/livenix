@@ -44,6 +44,7 @@ class LivenixModel(nn.Module):
         pretrained_backbone: bool = False,
         cdc_theta: float = 0.7,
         dropout: float = 0.1,
+        num_classes: int = 3,
     ) -> None:
         super().__init__()
         self.backbone = LivenixBackbone(
@@ -54,6 +55,7 @@ class LivenixModel(nn.Module):
         self.head = MainHead(
             in_features=self.backbone.out_channels,
             dropout=dropout,
+            num_classes=num_classes,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
