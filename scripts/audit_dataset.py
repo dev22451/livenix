@@ -72,15 +72,16 @@ def _read_spoof_type(sidecar: Path) -> int | None:
 
 
 def audit_full(root: Path) -> dict:
-    """Walk the official CelebA-Spoof layout: root/Data/<split>/<subj>/<live|spoof>/*.png+txt."""
-    data_dir = root / "Data"
-    if not data_dir.is_dir():
-        # Some downloads put it one level deeper:
-        candidates = list(root.glob("*/Data"))
-        if candidates:
-            data_dir = candidates[0]
-        else:
-            raise FileNotFoundError(f"Could not find Data/ inside {root}")
+    """Parse CelebA-Spoof's metas/intra_test/*_label.txt files.
+
+    Each line: ``Data/<split>/<subj>/<live|spoof>/<file>.<ext> <0_or_1>``
+    Binary labels only (0=live, 1=spoof). Fine-grained spoof types live
+    in protocol1/2 — out of scope for this audit; we don't need them to
+    eyeball skin-tone distribution.
+    """
+    metas = root / "metas" / "intra_test"
+    if not metas.is_dir():
+        raise FileNotFoundError(f"Expected {metas} (CelebA-Spoof intra_test labels)")
 
     report: dict = {
         "variant": "full",
@@ -91,42 +92,38 @@ def audit_full(root: Path) -> dict:
     }
 
     identity_ids: set[str] = set()
-    for split_dir in sorted(data_dir.iterdir()):
-        if not split_dir.is_dir():
-            continue
-        split_name = split_dir.name
+    for label_file in sorted(metas.glob("*_label.txt")):
+        split_name = label_file.stem.replace("_label", "")  # "train" or "test"
         split_info = {
-            "subjects": 0,
+            "subjects": set(),
             "live_samples": 0,
             "spoof_samples": 0,
-            "skipped": 0,
-            "attack_type_counts": Counter(),
+            "missing_on_disk": 0,
         }
-        for subj in sorted(split_dir.iterdir()):
-            if not subj.is_dir():
-                continue
-            identity_ids.add(f"{split_name}/{subj.name}")
-            split_info["subjects"] += 1
-            for sub in ("live", "spoof"):
-                d = subj / sub
-                if not d.is_dir():
+        with label_file.open() as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 2:
                     continue
-                for img in d.glob("*.png"):
-                    side = img.with_suffix(".txt")
-                    if not side.is_file():
-                        split_info["skipped"] += 1
-                        continue
-                    t = _read_spoof_type(side)
-                    if t is None:
-                        split_info["skipped"] += 1
-                        continue
-                    if t == 0:
-                        split_info["live_samples"] += 1
-                    else:
-                        split_info["spoof_samples"] += 1
-                    split_info["attack_type_counts"][t] += 1
-                    report["attack_type_counts"][t] += 1
-                    report["image_paths"].append((img, t, split_name))
+                rel_path, label_str = parts[0], parts[-1]
+                try:
+                    label = int(label_str)
+                except ValueError:
+                    continue
+                # rel_path like Data/train/2623/live/000000.jpg
+                segs = rel_path.split("/")
+                if len(segs) >= 3:
+                    subj_id = f"{segs[1]}/{segs[2]}"
+                    split_info["subjects"].add(subj_id)
+                    identity_ids.add(subj_id)
+                if label == 0:
+                    split_info["live_samples"] += 1
+                else:
+                    split_info["spoof_samples"] += 1
+                report["attack_type_counts"][label] += 1
+                report["image_paths"].append((root / rel_path, label, split_name))
+
+        split_info["subjects"] = len(split_info["subjects"])
         report["splits"][split_name] = split_info
 
     report["identities_total"] = len(identity_ids)
@@ -269,15 +266,17 @@ def format_report(report: dict, brightness: dict, out_root: Path) -> str:
         lines.append("Per-split breakdown:")
         for split, info in report["splits"].items():
             lines.append(f"  {split:>10s}: subjects={info['subjects']:,}  "
-                         f"live={info['live_samples']:,}  spoof={info['spoof_samples']:,}  "
-                         f"skipped={info['skipped']}")
+                         f"live={info['live_samples']:,}  spoof={info['spoof_samples']:,}")
         lines.append("")
-        lines.append("Spoof-type breakdown (full dataset):")
+        lines.append("Binary label breakdown (intra_test protocol):")
         for t in sorted(report["attack_type_counts"]):
-            name = SPOOF_TYPE_NAMES.get(t, f"type_{t}")
+            name = "Live" if t == 0 else "Spoof"
             n = report["attack_type_counts"][t]
             pct = 100.0 * n / max(total_imgs, 1)
-            lines.append(f"  {t:>2d} {name:<18s}: {n:>8,}  ({pct:5.1f}%)")
+            lines.append(f"  {t}: {name:<10s} {n:>8,}  ({pct:5.1f}%)")
+        lines.append("")
+        lines.append("Note: fine-grained spoof types (Photo/Poster/Phone/PC/etc.) live in")
+        lines.append("metas/protocol1 and protocol2 — out of scope for this audit.")
     else:
         lines.append("")
         lines.append("Per-split breakdown:")
